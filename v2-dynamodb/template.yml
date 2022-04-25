@@ -1,0 +1,268 @@
+Resources:
+  hits6AFB21AE:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      KeySchema:
+        - AttributeName: path
+          KeyType: HASH
+      AttributeDefinitions:
+        - AttributeName: path
+          AttributeType: S
+      ProvisionedThroughput:
+        ReadCapacityUnits: 5
+        WriteCapacityUnits: 5
+      TableName: hits
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/hits/Resource
+  dynamodblambdaServiceRoleDFFF78D7:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action: sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - Fn::Join:
+            - ""
+            - - "arn:"
+              - Ref: AWS::Partition
+              - :iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/dynamodb-lambda/ServiceRole/Resource
+  dynamodblambdaServiceRoleDefaultPolicyE25E7BAF:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Action:
+              - dynamodb:BatchGetItem
+              - dynamodb:BatchWriteItem
+              - dynamodb:ConditionCheckItem
+              - dynamodb:DeleteItem
+              - dynamodb:DescribeTable
+              - dynamodb:GetItem
+              - dynamodb:GetRecords
+              - dynamodb:GetShardIterator
+              - dynamodb:PutItem
+              - dynamodb:Query
+              - dynamodb:Scan
+              - dynamodb:UpdateItem
+            Effect: Allow
+            Resource:
+              - Fn::GetAtt:
+                  - hits6AFB21AE
+                  - Arn
+              - Ref: AWS::NoValue
+        Version: "2012-10-17"
+      PolicyName: dynamodblambdaServiceRoleDefaultPolicyE25E7BAF
+      Roles:
+        - Ref: dynamodblambdaServiceRoleDFFF78D7
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/dynamodb-lambda/ServiceRole/DefaultPolicy/Resource
+  dynamodblambda8BBF9B1D:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket:
+          Fn::Sub: cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}
+        S3Key: 0bd33c4f7151aa0c57769a25bc10805c5a8037c4e06b404197b24e9f5657b0a6.zip
+      Role:
+        Fn::GetAtt:
+          - dynamodblambdaServiceRoleDFFF78D7
+          - Arn
+      Description: Simple webservice integration (with DynamoDB)
+      Environment:
+        Variables:
+          HITS_TABLE_NAME: hits
+      FunctionName: dynamodb-lambda
+      Handler: index.handler
+      MemorySize: 512
+      Runtime: nodejs14.x
+      Timeout: 30
+    DependsOn:
+      - dynamodblambdaServiceRoleDefaultPolicyE25E7BAF
+      - dynamodblambdaServiceRoleDFFF78D7
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/dynamodb-lambda/Resource
+      aws:asset:path: /Users/alazaroc/Documents/MyProjects/github/aws/cdk/aws-cdk-simple-webservice/v2-dynamodb/functions/dynamodb-example
+      aws:asset:is-bundled: false
+      aws:asset:property: Code
+  dynamodblambdaEventInvokeConfigDD54F26F:
+    Type: AWS::Lambda::EventInvokeConfig
+    Properties:
+      FunctionName:
+        Ref: dynamodblambda8BBF9B1D
+      Qualifier: $LATEST
+      MaximumRetryAttempts: 0
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/dynamodb-lambda/EventInvokeConfig/Resource
+  mycdksimplewebservicev2521CC63D:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Description: My cdk simple webservice
+      Name: my-cdk-simple-webservice-v2
+      ProtocolType: HTTP
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/my-cdk-simple-webservice-v2/Resource
+  mycdksimplewebservicev2DefaultRoutedynamoLambdaIntegrationC708F417:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId:
+        Ref: mycdksimplewebservicev2521CC63D
+      IntegrationType: AWS_PROXY
+      IntegrationUri:
+        Fn::GetAtt:
+          - dynamodblambda8BBF9B1D
+          - Arn
+      PayloadFormatVersion: "2.0"
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/my-cdk-simple-webservice-v2/DefaultRoute/dynamoLambdaIntegration/Resource
+  mycdksimplewebservicev2DefaultRoutedynamoLambdaIntegrationPermissionC7D06049:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName:
+        Fn::GetAtt:
+          - dynamodblambda8BBF9B1D
+          - Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn:
+        Fn::Join:
+          - ""
+          - - "arn:"
+            - Ref: AWS::Partition
+            - ":execute-api:"
+            - Ref: AWS::Region
+            - ":"
+            - Ref: AWS::AccountId
+            - ":"
+            - Ref: mycdksimplewebservicev2521CC63D
+            - /*/*
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/my-cdk-simple-webservice-v2/DefaultRoute/dynamoLambdaIntegration-Permission
+  mycdksimplewebservicev2DefaultRouteB3EC0E47:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId:
+        Ref: mycdksimplewebservicev2521CC63D
+      RouteKey: $default
+      AuthorizationType: NONE
+      Target:
+        Fn::Join:
+          - ""
+          - - integrations/
+            - Ref: mycdksimplewebservicev2DefaultRoutedynamoLambdaIntegrationC708F417
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/my-cdk-simple-webservice-v2/DefaultRoute/Resource
+  mycdksimplewebservicev2DefaultStageF1A78D68:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId:
+        Ref: mycdksimplewebservicev2521CC63D
+      StageName: $default
+      AutoDeploy: true
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/my-cdk-simple-webservice-v2/DefaultStage/Resource
+  CDKMetadata:
+    Type: AWS::CDK::Metadata
+    Properties:
+      Analytics: v2:deflate64:H4sIAAAAAAAA/21Qy26DMBD8ltzNptBDe2wStWpuEe09WsyGbAAbYUOELP69tkmiHHqa2dnHjJ1BloJLV3g1iSzrpOEC3I9FWQsvHV05KWx16cVfLBoSu5OKZBYNtkWJ4L4GJS1rFVoP/jmSsns16pp2Wp24Ct1/xQP1LRvjl2bB2ILL9WIT8aAbllOci2wW5vWIxpA1sAnga9gOsia7RUMCO67Q0hWnMQPn1zYdh+29slT1eM+Z68FGE//SiuZZ5GT00EsS8WhQWcV4j4bnPnTJNiZNE2y6M8LL6uP2c+uAz/a3CfdtbRdSBFx8A3sOFOp7EKVLgotZj+kbvPvzF8Oc9IOy3BLkC/4Bjz4DpbQBAAA=
+    Metadata:
+      aws:cdk:path: cdk-simple-webservice-v2/CDKMetadata/Default
+    Condition: CDKMetadataAvailable
+Conditions:
+  CDKMetadataAvailable:
+    Fn::Or:
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - af-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-northeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ap-southeast-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - ca-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - cn-northwest-1
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-central-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-north-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-2
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - eu-west-3
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - me-south-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - sa-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-east-2
+      - Fn::Or:
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-1
+          - Fn::Equals:
+              - Ref: AWS::Region
+              - us-west-2
+Parameters:
+  BootstrapVersion:
+    Type: AWS::SSM::Parameter::Value<String>
+    Default: /cdk-bootstrap/hnb659fds/version
+    Description: Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]
+Rules:
+  CheckBootstrapVersion:
+    Assertions:
+      - Assert:
+          Fn::Not:
+            - Fn::Contains:
+                - - "1"
+                  - "2"
+                  - "3"
+                  - "4"
+                  - "5"
+                - Ref: BootstrapVersion
+        AssertDescription: CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.
+
