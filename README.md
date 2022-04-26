@@ -17,3 +17,11 @@ In this version, a DynamoDB table has been added to the Lambda Function
 ![simple-webservice-v2](v2-dynamodb/simple-webservice-v2.png)
 
 Challenge: Test DynamoDB locally with SAM
+
+## v3
+
+In this version, the Lambda Function also connects with an external API
+
+![simple-webservice-v3](v3-dynamodb-and-external-api/simple-webservice-v3.png)
+
+Challenge: deploy my nodejs Lambda Function with an external library (requests)
